@@ -1,0 +1,5 @@
+*.csv 
+!dashboard/dashboard_sample.csv 
+__pycache__/ 
+*.pkl 
+!dashboard/rf_model.pkl
