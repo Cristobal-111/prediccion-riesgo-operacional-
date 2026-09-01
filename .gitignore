@@ -1,5 +1,6 @@
 *.csv 
-!dashboard/dashboard_sample.csv 
+!dashboard_sample.csv 
+!importancias.csv
 __pycache__/ 
 *.pkl 
-!dashboard/rf_model.pkl
+!rf_model.pkl
