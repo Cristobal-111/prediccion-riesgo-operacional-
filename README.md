@@ -1,121 +1,116 @@
-# Predicción de Riesgo/Discrepancia Operacional
+# 🔍 Riesgo operacional en PaySim: mi modelo aprendía una resta
 
-Modelo de regresión lineal que predice la **magnitud de una discrepancia de conciliación** en transacciones financieras, en función de variables del proceso (tipo de transacción, monto, saldos previos, antigüedad).
+> **Versión 2.** Revisé mi modelo de "discrepancia de conciliación" (R² 0,96) y descubrí que la variable objetivo era una **fórmula exacta** de dos de sus variables de entrada. Esta versión audita ese objetivo, explica lo que la discrepancia sí revela y se enfoca en el riesgo real del dataset: el **fraude**, donde una regla de negocio detecta el 97,6 % frente al 0,2 % de la alerta del sistema.
 
-Proyecto basado en la metodología del **Google Advanced Data Analytics Professional Certificate** (Coursera), replicando el enfoque usado para predecir `fare_amount` en un dataset de taxis, pero aplicado a un caso de **riesgo/control de gestión operacional**.
+![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-1.3+-F7931E?logo=scikitlearn&logoColor=white)
+![Versión](https://img.shields.io/badge/versión-2.0-2a78d6)
+![Estado](https://img.shields.io/badge/estado-completado-1baf7a)
+![Licencia](https://img.shields.io/badge/licencia-MIT-lightgrey)
 
-## Dataset
+![Portada](images/00_portada.png)
 
-**PaySim** — Synthetic Financial Datasets For Fraud Detection
-Fuente: https://www.kaggle.com/datasets/ealaxi/paysim1
-Simulador de transacciones de dinero móvil (6.3M+ registros) basado en logs reales de un servicio financiero.
+---
 
-> Lopez-Rojas, E. A., Elmir, A., & Axelsson, S. (2016). *PaySim: A financial mobile money simulator for fraud detection*. The 28th European Modeling and Simulation Symposium (EMSS), Larnaca, Cyprus.
+## 🔁 Qué cambió respecto de la versión 1
 
-## Metodología
-
-### 1. Ingeniería de la variable objetivo
-
-PaySim no trae una columna de "discrepancia" explícita, así que se construyó una:
-
-```
-discrepancia = |saldo_reportado_post_transacción − saldo_esperado_post_transacción|
-```
-
-El saldo esperado se calcula según el tipo de transacción (el dinero sale o entra de la cuenta origen). Esta métrica es directamente análoga a lo que un analista revisa al conciliar movimientos contra saldos esperados.
-
-### 2. Features utilizadas
-
-Solo variables conocidas **antes o al momento** de la transacción (se excluyen los saldos posteriores para evitar *data leakage*, ya que se usaron para construir el target):
-
-- `type` (codificada como dummies)
-- `amount`
-- `step` (antigüedad temporal)
-- `oldbalanceOrg`
-- `oldbalanceDest`
-
-### 3. Modelo
-
-`LinearRegression` de scikit-learn, sobre features estandarizadas con `StandardScaler`, split 80/20.
-
-## Resultados
-
-| Métrica | Valor |
-|---|---|
-| R² | 0.963 |
-| MAE | 41,798 |
-
-### Coeficientes (efecto estandarizado sobre la discrepancia)
-
-| Feature | Coeficiente |
-|---|---|
-| `amount` | **572,937** |
-| `type_PAYMENT` | 72,684 |
-| `type_CASH_OUT` | 64,882 |
-| `type_TRANSFER` | 42,300 |
-| `type_DEBIT` | 12,305 |
-| `oldbalanceDest` | 7,457 |
-| `oldbalanceOrg` | −4,035 |
-| `step` | −1,091 |
-
-**Feature con mayor efecto: `amount`**
-
-Como se usó `StandardScaler`, cada coeficiente representa el cambio esperado en la discrepancia (en unidades monetarias) asociado a un aumento de una desviación estándar en esa variable, manteniendo las demás constantes.
-
-## Conclusiones
-
-1. El **monto de la transacción** es, por lejos, la variable con mayor efecto sobre la magnitud de la discrepancia de conciliación, muy por encima del tipo de transacción o los saldos previos.
-2. Las transacciones tipo `PAYMENT`, `CASH_OUT` y `TRANSFER` concentran el mayor riesgo de discrepancia frente a `DEBIT` y `CASH_IN`.
-3. Un modelo lineal simple ya explica ~96% de la variabilidad (R² ≈ 0.96) — un buen punto de partida para un sistema de alerta temprana sin necesidad de modelos más complejos.
-4. **Aplicación práctica:** estos resultados permiten priorizar la revisión manual de conciliaciones hacia transacciones de alto monto y de los tipos con mayor coeficiente, optimizando el tiempo del equipo de control de gestión.
-
-## Etapa 2 — Clasificación de riesgo (Bajo / Medio / Alto)
-
-La discrepancia continua se convierte en una categoría de riesgo accionable para negocio:
-
-- **Bajo**: sin discrepancia (conciliación perfecta) — 30.5%
-- **Medio**: discrepancia entre 0 y la mediana de los casos con discrepancia — 34.7%
-- **Alto**: discrepancia sobre esa mediana — 34.7%
-
-Se compararon dos modelos, usando las mismas features (sin leakage) que en la etapa 1:
-
-| Modelo | Accuracy | Notas |
+| | Versión 1 | Versión 2 |
 |---|---|---|
-| Regresión Logística | 78% | Interpretable, buen baseline |
-| **Random Forest** | **88%** | Mejor desempeño, usado en el dashboard |
+| Enfoque | Predecir la "discrepancia de conciliación" | **Auditar el objetivo antes de modelarlo** |
+| Discrepancia | Regresión lineal · R² 0,96 | Fórmula exacta: `máx(0, monto − saldo previo)` · R² 1,00 |
+| Categorías de riesgo | Random Forest · 88 % de exactitud | Regla de una línea · 100 % |
+| Qué mide la discrepancia | Riesgo de conciliación | Salidas **ejecutadas sin saldo suficiente** (artefacto del simulador) |
+| Fraude | No analizado | Regla "vacía la cuenta": **97,6 %** de los fraudes (sistema: 0,2 %) |
+| Validación | Split aleatorio | **Validación temporal** (últimos 10 días) |
 
-En ambos modelos, la categoría **"Alto"** se predice casi a la perfección (F1 ≈ 0.99), lo que la hace confiable para priorizar revisiones. En el Random Forest, `oldbalanceOrg` (33%) y `amount` (29%) concentran la mayor importancia — a diferencia de la regresión, donde `amount` dominaba solo.
+La versión 1 (scripts, dashboard de Streamlit y modelo) se conserva en [`version_original/`](version_original/).
 
-Script: [`clasificacion_riesgo.py`](clasificacion_riesgo.py)
+## ❌ Error 1: la discrepancia es una resta
 
-## Etapa 3 — Dashboard interactivo (Streamlit)
+![La discrepancia es una resta](images/01_discrepancia_es_una_resta.png)
 
-Panel de riesgo operacional en `dashboard/dashboard.py`, con:
+Cuando una salida de dinero supera el saldo disponible, PaySim la ejecuta igual y deja el saldo en 0. Por eso la "discrepancia" que construí es exactamente lo que faltaba: `máx(0, monto − saldo previo)`, en el **100 %** de las transacciones (con una diferencia máxima de 1 centavo por redondeo).
 
-- KPIs: transacciones filtradas, % riesgo Alto, monto expuesto, precisión del modelo
-- Filtros por tipo de transacción, rango de monto y categoría de riesgo
-- Ranking de las transacciones con mayor probabilidad de riesgo Alto (para priorizar revisión manual)
-- Gráfico de importancia de variables y matriz de confusión en vivo
+Excluir los saldos posteriores evitaba la fuga de datos más obvia, pero el objetivo seguía siendo una **función determinística** de `amount` y `oldbalanceOrg`. La regresión no descubrió un patrón de riesgo: aproximó una resta con una recta.
+
+## ❌ Error 2: las categorías de riesgo también
+
+Las categorías Bajo / Medio / Alto salían de la misma resta: una regla de una línea las reproduce al **100 %**, frente al 88 % del Random Forest. Además, como "Bajo" exigía `discrepancia == 0`, un **13 %** de las transacciones quedaba en riesgo "Medio" por **1 centavo** de redondeo de punto flotante.
+
+## ❌ Error 3: lo que la discrepancia realmente mide
+
+![Salidas sin saldo](images/02_salidas_sin_saldo.png)
+
+El **73 %** de las salidas de dinero (y el 95 % de las transferencias) se ejecuta por un monto mayor al saldo disponible. En un banco real sería una falla de control grave; en PaySim es una **simplificación del simulador**. Conclusión: los saldos de PaySim no sirven para estudiar conciliación. El riesgo para el que fue diseñado es el fraude.
+
+## 🚨 El riesgo real: fraude
+
+Se usan las transacciones legítimas de la muestra (con peso 50 para estimar a escala real) y **todos** los fraudes.
+
+![Fraude: reglas vs. modelo](images/03_fraude_reglas_vs_modelo.png)
+
+| Regla | Fraudes detectados (de 8.213) | Falsas alarmas estimadas |
+|---|---|---|
+| Alerta del sistema (`isFlaggedFraud`) | 16 (0,2 %) | 0 |
+| Monto ≥ 200.000 en transferencias o retiros | 5.471 (66,6 %) | ~1,2 millones |
+| **Vacía la cuenta** (monto = saldo previo) | **8.018 (97,6 %)** | **0 en la muestra** |
+
+Un Gradient Boosting con las variables crudas, validado en los últimos 10 días, no descubre el patrón (PR-AUC 0,53): "monto **igual** al saldo" es una relación entre dos variables, y un árbol compara cada variable por separado. Con la variable `vacia_cuenta` llega a **0,98**, prácticamente lo mismo que la regla sola (0,97). **La ingeniería de variables con criterio de negocio vale más que el algoritmo.**
+
+## 🧪 ¿Qué tan realista es PaySim?
+
+![Realismo del simulador](images/04_realismo_simulador.png)
+
+- Desde el día 18, las transacciones legítimas caen de ~350 mil a ~27 mil por día, mientras los fraudes siguen en ~265 por día: la prevalencia cambia artificialmente.
+- El fraude se reparte parejo en las 24 horas, pero la actividad legítima casi desaparece de madrugada: entre 0 y 5 h, cerca de **1 de cada 5** transferencias o retiros es fraude (vs. 0,16 % de día).
+
+Por eso los resultados de PaySim (muchos notebooks públicos reportan ROC-AUC ≈ 0,99) no se trasladan directamente a datos reales.
+
+## 💡 Conclusiones
+
+1. **Un R² de 0,96 con variables simples era una señal de alerta, no un logro.** Si el objetivo se construye con las mismas columnas que lo predicen, el modelo aprende aritmética.
+2. **Antes de modelar, verificar si el objetivo es una regla.**
+3. **La discrepancia es un hallazgo de control para reportar**, no algo que predecir.
+4. **Una regla de negocio bien pensada supera a la alerta existente** y a un modelo sin las variables correctas.
+
+## 🗂️ Estructura del repositorio
+
+```
+prediccion-riesgo-operacional-/
+├── data/                  # Muestra del 2 % + todos los fraudes (ver data/README.md)
+├── images/                # Gráficos de la versión 2
+├── notebooks/
+│   └── riesgo_operacional_paysim_v2.ipynb
+├── reports/               # Reglas, modelos y comparación antes/después (CSV)
+├── version_original/      # Scripts, dashboard y modelo de la versión 1
+├── requirements.txt
+├── LICENSE
+└── README.md
+```
+
+## ▶️ Cómo reproducirlo
 
 ```bash
-cd dashboard
+git clone https://github.com/Cristobal-111/prediccion-riesgo-operacional-.git
+cd prediccion-riesgo-operacional-
 pip install -r requirements.txt
-streamlit run dashboard.py
+jupyter notebook notebooks/riesgo_operacional_paysim_v2.ipynb
 ```
 
-El dashboard usa una muestra de 15.000 transacciones de validación (`dashboard_sample.csv`) con las predicciones ya calculadas, para que corra liviano sin necesitar el CSV completo de 471 MB. El modelo entrenado (`rf_model.pkl`) queda disponible para anotar nuevas transacciones.
+Los datos necesarios ya están en `data/` (10 MB); no hace falta descargar el CSV completo de 471 MB.
 
-## Cómo ejecutar el proyecto completo
+## ⚠️ Limitaciones
 
-```bash
-pip install pandas numpy scikit-learn matplotlib streamlit
-python discrepancia_riesgo_operacional.py   # Etapa 1: regresión
-python clasificacion_riesgo.py              # Etapa 2: clasificación
-cd dashboard && streamlit run dashboard.py  # Etapa 3: dashboard
-```
+- PaySim es **sintético**: sus patrones de fraude siguen reglas del simulador.
+- Las tasas a escala real se estiman con una muestra del 2 % de las transacciones legítimas.
 
-(Descargar el CSV de Kaggle y ajustar `DATA_PATH` en los scripts.)
+## 📚 Fuente de datos
 
-## Stack
+[PaySim — Kaggle](https://www.kaggle.com/datasets/ealaxi/paysim1) · López-Rojas, E. A., Elmir, A. y Axelsson, S. (2016). *PaySim: A financial mobile money simulator for fraud detection*. EMSS, Larnaca, Chipre.
 
-Python · pandas · scikit-learn · matplotlib · Streamlit
+Proyecto basado en la metodología del **Google Advanced Data Analytics Professional Certificate** (Coursera).
+
+## 👤 Autor
+
+**Cristóbal Rojas Troncoso** · Ingeniero Civil Industrial | Inteligencia de negocios y análisis de datos
+[LinkedIn](https://www.linkedin.com/in/cristobal-rojas-troncoso/) · [GitHub](https://github.com/Cristobal-111)

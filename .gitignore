@@ -1,6 +1,3 @@
-*.csv 
-!dashboard_sample.csv 
-!importancias.csv
-__pycache__/ 
-*.pkl 
-!rf_model.pkl
+__pycache__/
+.ipynb_checkpoints/
+PS_*.csv

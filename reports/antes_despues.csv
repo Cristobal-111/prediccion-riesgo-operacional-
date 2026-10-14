@@ -1,0 +1,8 @@
+,Versión 1,Versión 2
+Enfoque,Predecir la 'discrepancia de conciliación',Auditar el objetivo antes de modelarlo
+Discrepancia,"Regresión lineal · R² 0,97","Fórmula exacta: máx(0, monto − saldo) · R² 1,00"
+Categorías de riesgo,Random Forest · 88 % de exactitud,Regla de una línea · 100 %
+Qué mide la discrepancia,Riesgo de conciliación,Transacciones sin saldo suficiente (artefacto del simulador)
+Fraude,No analizado,"Regla 'vacía la cuenta': 97.6% de los fraudes (sistema: 0,2 %)"
+Validación,Split aleatorio,Validación temporal (últimos 10 días)
+Entregable,Dashboard sobre un objetivo determinístico,Reglas y límites del dataset documentados

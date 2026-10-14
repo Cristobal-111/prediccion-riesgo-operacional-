@@ -1,0 +1,4 @@
+Modelo,PR-AUC,ROC-AUC
+Gradient Boosting (variables crudas),0.5264457550143311,0.7578784003117125
+Gradient Boosting + vacia_cuenta,0.982383519619181,0.9998862186206374
+Solo la regla (sin modelo),0.9736987527526987,0.986731843575419

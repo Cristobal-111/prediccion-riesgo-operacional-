@@ -1,0 +1,4 @@
+Regla,Fraudes detectados,Recall,Falsas alarmas estimadas,Precisión
+Alerta del sistema (isFlaggedFraud),16,0.0019481310118105442,0.0,1.0
+Monto ≥ 200.000 (transferencia o retiro),5471,0.666139047850968,1195100.0,0.004556998294977973
+Vacía la cuenta (monto = saldo previo),8018,0.976257153293559,0.0,1.0
